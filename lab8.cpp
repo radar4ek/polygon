@@ -6,6 +6,7 @@
 #include <stack>
 #include <queue>
 #include <chrono>
+#include <cassert>
 using namespace std;
 
 struct Node {
@@ -70,24 +71,25 @@ public:
             node2->edges.push_back({node1,parsed_nodes.weight2});
             node3->edges.push_back({node1,parsed_nodes.weight3});            
         }
+
         
         
     }
     std::pair<std::vector<Node*>,double> DFS(Node* start, Node* end) {
         if (!start || !end) return {{},-1}; 
-        std::stack<Node*> stack; 
-        std::map<Node*, Node*> previous; // чтобы востановить путь
-        map<Node*,double> distances; // отслеживаем дистанцию от старта до каждой точки
+        std::stack<Node*> stack; // O(V) памяти в худшем случае
+        std::map<Node*, Node*> previous; // чтобы востановить путь, O(V) памяти
+        map<Node*,double> distances; // отслеживаем дистанцию от старта до каждой точки, O(V) памяти
         distances[start] = 0; //инициализация стартовой точки 
         previous[start] = nullptr;
         stack.push(start);
-        while (!stack.empty()) {
+        while (!stack.empty()) { // O(V + E) сложность в худшем случае чтобы дойти до нужной вершины(перебор всех верешин и всех соседей)
             Node* current_node = stack.top();
             stack.pop();
             if (current_node == end){ // нашли путь
                 break;
             }
-            for (auto& edge : current_node->edges) { // перебираем соседей
+            for (auto& edge : current_node->edges) { // перебираем соседей, O(E) в худшем случае 
                 Node* neighbor = edge.first;
                 double weight = edge.second;
                 if (previous.count(neighbor) == 0) { // если не посещали вершину
@@ -100,29 +102,35 @@ public:
         }
         std::vector<Node*> path; // востанавливаем путь
         Node* node = end;
-        while (node != nullptr){
+        while (node != nullptr){ // O(v) сложность
             path.push_back(node);
             node = previous[node];
         }
         reverse(path.begin(),path.end());
+        if (path.size() == 1){
+            return {{},-1};
+        }
         return {path,distances[end]};
+
     }
+    // O(V+E) ассимптотика 
+    // O(V) памяти
 
     std::pair<std::vector<Node*>,double> BFS(Node* start, Node* end) {
         if (!start || !end) return {{},-1};
-        std::queue<Node*> queue; 
-        std::map<Node*, Node*> previous; // чтобы востановить путь
-        map<Node*,double> distances; // отслеживаем дистанцию от старта до каждой точки
+        std::queue<Node*> queue; // O(V) памяти в худшем случае
+        std::map<Node*, Node*> previous; // чтобы востановить путь,O(V) памяти
+        map<Node*,double> distances; // отслеживаем дистанцию от старта до каждой точки,O(V) памяти
         queue.push(start); //инициализация стартовой точки 
         distances[start] = 0;
         previous[start] = nullptr;
-        while (!queue.empty()) {
+        while (!queue.empty()) {// O(V + E) сложность в худшем случае чтобы дойти до нужной вершины(перебор всех верешин и всех соседей)
             auto current_node = queue.front();
             queue.pop();
             if (current_node == end){// нашли путь
                 break;
             }
-            for (auto& edge : current_node->edges) {// перебираем соседей
+            for (auto& edge : current_node->edges) {// перебираем соседей, O(E) в худшем случае 
                 Node* neighbor = edge.first;
                 double weight = edge.second;
                 if (previous.count(neighbor) == 0) { // если не посещали вершину
@@ -135,62 +143,73 @@ public:
         }
         std::vector<Node*> path;
         Node* node = end;
-        while (node != nullptr){
+        while (node != nullptr){ // O(V)
             path.push_back(node);
             node = previous[node];
         }
         reverse(path.begin(),path.end());
-        return {path,distances[end]}; 
+        if (path.size() == 1){
+            return {{},-1};
+        }
+        return {path,distances[end]};
     }
+    // O(V+E) ассимптотика 
+    // O(V) памяти
 
 
     std::pair<std::vector<Node*>,double> Dijkstra(Node* start, Node* end) {
         // приоретеная очередь
-        std::priority_queue<std::pair<double, Node*>, std::vector<std::pair<double, Node*>>, std::greater<>> pqueue;
-        std::map<Node*, double> distances;
-        std::map<Node*, Node*> previous;
-        for (auto* node : nodes) {
+        std::priority_queue<std::pair<double, Node*>, std::vector<std::pair<double, Node*>>, std::greater<>> pqueue;//O(V) памяти
+        std::map<Node*, double> distances;//O(V) памяти
+        std::map<Node*, Node*> previous;//O(V) памяти
+        for (auto* node : nodes) {//O(V) 
             distances[node] = std::numeric_limits<double>::max();
         }
         distances[start] = 0;
         pqueue.push({0, start});
         previous[start] = nullptr;
         double ans;
-        while (!pqueue.empty()) {
+        while (!pqueue.empty()) {//O(V)
             auto [current_distance, current_node] = pqueue.top();
-            pqueue.pop();
+            pqueue.pop();//O(log(V))
             if (current_node == end) { // нашли путь
                 ans = current_distance;
                 break;
             }
             if (current_distance > distances[current_node]) continue; // путь до текущей точки не минимальный 
-            for (auto& edge : current_node->edges) {
+            for (auto& edge : current_node->edges) {// O(E)
                 Node* neighbor = edge.first;
                 double weight = edge.second;
                 double new_distance = current_distance + weight;
                 if (new_distance < distances[neighbor]) {// если нашли путь короче чем было тогда обновляем distances и previous
                     distances[neighbor] = new_distance;  // и снова добавляем в очередь
                     previous[neighbor] = current_node;
-                    pqueue.push({new_distance, neighbor});
+                    pqueue.push({new_distance, neighbor});//O(log(V))
                 }
             }
         }
         std::vector<Node*> path; // востанавливаем путь
         Node* node = end;
-        while (node != nullptr){
+        while (node != nullptr){//O(V)
             path.push_back(node);
             node = previous[node];
         }
         reverse(path.begin(),path.end());
-        return {path,ans}; 
+        if (path.size() == 1){
+            return {{},-1};
+        }
+        return {path,distances[end]};
     }
+    // ассмптотика O(VlogV + Elog(V)) = O(log(V)(E+V))
+    // память O(V)
+
     std::pair<std::vector<Node*>,double> AStar(Node* start, Node* end) {
         //почти тоже самое что и Dijkstra
-        std::priority_queue<std::pair<double, Node*>, std::vector<std::pair<double, Node*>>, std::greater<>> pqueue;
-        std::map<Node*, double> distances; 
-        std::map<Node*, double> heuristic_distances; 
-        std::map<Node*, Node*> previous;
-        for (auto* node : nodes) {
+        std::priority_queue<std::pair<double, Node*>, std::vector<std::pair<double, Node*>>, std::greater<>> pqueue;// O(V) память
+        std::map<Node*, double> distances; // O(V) память
+        std::map<Node*, double> heuristic_distances; // O(V) память
+        std::map<Node*, Node*> previous;// O(V) память
+        for (auto* node : nodes) {// O(V) 
             distances[node] = std::numeric_limits<double>::max();
             heuristic_distances[node] = std::numeric_limits<double>::max();
         }
@@ -200,16 +219,16 @@ public:
         double ans;
         pqueue.push({heuristic_distances[start], start});
 
-        while (!pqueue.empty()) {
+        while (!pqueue.empty()) {//O(V)
             auto [current_f, current_node] = pqueue.top();
-            pqueue.pop();
+            pqueue.pop();//O(logV)
 
             if (current_node == end) {// нашли путь
                 ans = distances[end];
                 break;
             }
 
-            for (auto& edge : current_node->edges) { // перебор ребр
+            for (auto& edge : current_node->edges) { // перебор ребр O(E)
                 Node* neighbor = edge.first;
                 double weight = edge.second;
                 double new_distance = distances[current_node] + weight;
@@ -217,21 +236,25 @@ public:
                     distances[neighbor] = new_distance;
                     previous[neighbor] = current_node;
                     heuristic_distances[neighbor] = new_distance + Heuristic(neighbor, end);
-                    pqueue.push({heuristic_distances[neighbor], neighbor});
+                    pqueue.push({heuristic_distances[neighbor], neighbor}); //O(logV)
                 }
             }
         }
 
         std::vector<Node*> path; // востановление пути
         Node* node = end;
-        while (node != nullptr){
+        while (node != nullptr){ // O(V)
             path.push_back(node);
             node = previous[node];
         }
         reverse(path.begin(),path.end());
-
-        return {path,ans}; 
+        if (path.size() == 1){
+            return {{},-1};
+        }
+        return {path,distances[end]};
     }
+    // ассмптотика O(VlogV + Elog(V)) = O(log(V)(E+V))
+    // память O(V)
 private:
 
     struct ParsedNode
@@ -288,14 +311,104 @@ private:
     double Heuristic(Node* a, Node* b) {// расстоение между точек
         return std::sqrt(std::pow(a->lon - b->lon, 2) + std::pow(a->lat - b->lat, 2));
     }
-
+public:// чтобы тесты делать
     std::map<std::pair<double, double>, Node*> cords_node; 
     std::vector<Node*> nodes; 
 };
 
+void TestDFS(){
+    Graph graph;
+    Node* n1 = new Node{30.0, 60.0, {}};
+    Node* n2 = new Node{31.0, 61.0, {}};
+    Node* n3 = new Node{32.0, 62.0, {}};
+    n1->edges.push_back({n2, 10.0});
+    n2->edges.push_back({n3, 15.0});
+    graph.nodes = {n1, n2, n3};
+
+    // Тест с путём
+    auto result1 = graph.DFS(n1, n3);
+    assert(result1.second == 25.0);
+    std::vector<Node*> res = {n1, n2, n3};
+    assert(result1.first == res);
+    // Тест без пути
+    Node* isolated = new Node{33.0, 63.0, {}};
+    auto result2 = graph.DFS(n1, isolated);
+    assert(result2.second == -1);
+    assert(result2.first.empty());
+    std::cout << "Test DFS is OK\n";
+}
+void TestBFS(){
+    Graph graph;
+    Node* n1 = new Node{30.0, 60.0, {}};
+    Node* n2 = new Node{31.0, 61.0, {}};
+    Node* n3 = new Node{32.0, 62.0, {}};
+    Node* n4 = new Node{33.0, 63.0, {}};
+    n1->edges.push_back({n2, 10.0});
+    n2->edges.push_back({n3, 15.0});
+    n1->edges.push_back({n4, 5.0});
+    n4->edges.push_back({n3, 5.0});
+    n1->edges.push_back({n3,400});
+    graph.nodes = {n1, n2, n3, n4};
+    // Тест с путём
+    
+    auto result1 = graph.BFS(n1, n3);
+    assert(result1.second == 400);
+    std::vector<Node*> res = {n1, n3};
+    assert(result1.first == res);
+
+    // Тест без пути
+    Node* isolated = new Node{34.0, 64.0, {}};
+    auto result2 = graph.BFS(n1, isolated);
+    assert(result2.second == -1);
+    assert(result2.first.empty());
+    std::cout << "Test BFS is OK\n";
+}
+void TestDijlstra(){
+    Graph graph;
+    Node* n1 = new Node{30.0, 60.0, {}};
+    Node* n2 = new Node{31.0, 61.0, {}};
+    Node* n3 = new Node{32.0, 62.0, {}};
+    Node* n4 = new Node{33.0, 63.0, {}};
+    n1->edges.push_back({n2, 10.0});
+    n2->edges.push_back({n3, 20.0});
+    n1->edges.push_back({n4, 5.0});
+    n4->edges.push_back({n3, 5.0});
+
+    graph.nodes = {n1, n2, n3, n4};
+    auto result = graph.Dijkstra(n1, n3);
+
+    assert(result.second == 10.0); 
+    std::vector<Node*> res = {n1, n4, n3};
+    assert(result.first == res);
+    std::cout << "Test Dijlstra is OK\n";
+}
+void TestAStar(){
+    Graph graph;
+    Node* n1 = new Node{30.0, 60.0, {}};
+    Node* n2 = new Node{31.0, 61.0, {}};
+    Node* n3 = new Node{32.0, 62.0, {}};
+    Node* n4 = new Node{33.0, 63.0, {}};
+    n1->edges.push_back({n2, 10.0});
+    n2->edges.push_back({n3, 20.0});
+    n1->edges.push_back({n4, 5.0});
+    n4->edges.push_back({n3, 5.0});
+
+    graph.nodes = {n1, n2, n3, n4};
+    auto result = graph.AStar(n1, n3);
+
+    assert(result.second == 10.0); 
+    std::vector<Node*> res = {n1, n4, n3};
+    assert(result.first == res);
+
+    std::cout << "Test A* is OK\n";
+}
 
 
 int main(){
+    TestDFS();
+    TestBFS();
+    TestDijlstra();
+    TestAStar();
     Graph graph;
     //std::ifstream file("/Users/mishakobgunov/Desktop/rotube/lab8/spb_graph.txt"); //у меня просто название почему то не работает
     std::ifstream file("spb_graph.txt");
